@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b4f8a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>IMT_27_Código</title>
+<link rel="stylesheet" href="css/mobile-base.css">
+<link rel="stylesheet" href="css/menu.css">
+<script src="js/access-control.js"></script>
+</head>
+<body class="safe-top safe-bottom">
+
+<header class="app-bar">
+  <div class="app-title" id="appTitle">IMT_27 Código</div>
+  <span class="spacer"></span>
+  <button class="lang-btn" id="langBtn" type="button">PT</button>
+  <button class="icon-btn" id="settingsBtn" type="button" aria-label="Configuração IA" title="Config IA">&#9881;</button>
+</header>
+
+<main class="page learning-home">
+  <section class="learning-hero" aria-label="Learning dashboard">
+    <div class="learning-hero-top">
+      <div>
+        <span class="learning-kicker" id="learnKicker">O seu progresso</span>
+        <h1 id="learnTitle">Continue a aprender</h1>
+      </div>
+      <div class="readiness-ring" id="readinessRing"><span id="readinessPct">0%</span></div>
+    </div>
+    <div class="readiness-copy"><span id="readinessLabel">Precisão global</span><span id="offlineState">Offline</span></div>
+    <div class="learn-stats">
+      <div><strong id="statTests">0</strong><span id="statTestsL">Testes</span></div>
+      <div><strong id="statAccuracy">0%</strong><span id="statAccuracyL">Precisão</span></div>
+      <div><strong id="statWeak">0</strong><span id="statWeakL">A rever</span></div>
+      <div><strong id="statStreak">0</strong><span id="statStreakL">Dias</span></div>
+    </div>
+    <div class="learn-actions">
+      <button type="button" class="learn-action primary" id="continueBtn"><span>▶</span><b id="continueLabel">Continuar</b></button>
+      <button type="button" class="learn-action" id="weakBtn"><span>🎯</span><b id="weakLabel">Erros</b></button>
+      <button type="button" class="learn-action" id="progressBtn"><span>▥</span><b id="progressLabel">Progresso</b></button>
+    </div>
+  </section>
+
+  <section class="image-pack-card" id="imagePackCard" hidden>
+    <div class="image-pack-icon">▧</div>
+    <div class="image-pack-copy"><strong id="imagePackTitle">Imagens das perguntas</strong><span id="imagePackText">Descarregue uma vez para ver sinais e fotografias offline.</span></div>
+    <button type="button" class="btn btn-primary" id="imagePackBtn">Descarregar</button>
+  </section>
+  <div class="home-section-head"><div><strong id="categoriesTitle">Categorias</strong><span id="categoriesSub">Escolha o tipo de carta ou prova</span></div></div>
+  <div class="cat-grid" id="grid">
+    <div class="page-loader" id="loadingRow"><div class="loader-orbit" aria-hidden="true"></div><strong id="loadingText">A carregar…</strong><span>A preparar categorias e perguntas</span><div class="page-load-track"><i></i></div></div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="owner" id="footerOwner">Lakhwinder Singh</div>
+  <div id="footerCpy">Copyright © 2026 — Todos os direitos reservados.</div>
+</footer>
+
+<div class="image-install-overlay" id="imageInstallOverlay" hidden>
+  <div class="image-install-dialog">
+    <div class="loader-orbit" aria-hidden="true"></div>
+    <h2>Preparar imagens offline</h2>
+    <p id="imageInstallStatus">A iniciar transferência…</p>
+    <div class="page-load-track"><i id="imageInstallProgress"></i></div>
+    <small>Esta configuração é feita apenas uma vez.</small>
+  </div>
+</div>
+
+<!-- Ordem de carregamento (bridge): jquery -> mobile-db -> mobile-ai ->
+     mobile-tts -> mobile-apputil -> DBPerguntas -> ai.js -> tts.js -->
+<script src="lib/jquery.min.js"></script>
+<script src="js/mobile-db.js"></script>
+<script src="js/mobile-ai.js"></script>
+<script src="js/mobile-tts.js"></script>
+<script src="js/mobile-apputil.js"></script>
+<script src="js/learning.js"></script>
+<script src="js/image-pack.js"></script>
+<script src="db/DBPerguntas.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/tts.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ================= idioma (pt -> en -> pa, localStorage 'sr_lang') ===== */
+  var LANG_CYCLE = { pt: 'en', en: 'pa', pa: 'pt' };
+  var LANG_LABEL = { pt: 'PT', en: 'EN', pa: 'ਪੰਜਾਬੀ' };
+  var currentLang = (function () {
+    var l = 'pt';
+    try { l = localStorage.getItem('sr_lang') || 'pt'; } catch (e) {}
+    return (l === 'en' || l === 'pa') ? l : 'pt';
+  })();
+
+  var I18N = {
+    pt: {
+      loading: 'A carregar…',
+      appTitle: 'IMT_27 Código',
+      footerOwner: 'Lakhwinder Singh',
+      cpy: 'Copyright © 2026 — Todos os direitos reservados.',
+      questions: 'perguntas',
+      settingsAria: 'Configuração IA',
+      learnKicker: 'O seu progresso', learnTitle: 'Continue a aprender', readiness: 'Precisão global',
+      tests: 'Testes', accuracy: 'Precisão', weak: 'A rever', days: 'Dias',
+      continue: 'Continuar', mistakes: 'Erros', progress: 'Progresso', categories: 'Categorias',
+      categoriesSub: 'Escolha o tipo de carta ou prova', offlineReady: 'Imagens offline prontas', offlineNeed: 'Imagens por preparar'
+    },
+    en: {
+      loading: 'Loading…',
+      appTitle: 'IMT_27 Código',
+      footerOwner: 'Lakhwinder Singh',
+      cpy: 'Copyright © 2026 — All rights reserved.',
+      questions: 'questions',
+      settingsAria: 'AI Settings',
+      learnKicker: 'Your progress', learnTitle: 'Keep learning', readiness: 'Overall accuracy',
+      tests: 'Tests', accuracy: 'Accuracy', weak: 'To review', days: 'Days',
+      continue: 'Continue', mistakes: 'Mistakes', progress: 'Progress', categories: 'Categories',
+      categoriesSub: 'Choose your licence or test type', offlineReady: 'Offline images ready', offlineNeed: 'Images need setup'
+    },
+    pa: {
+      loading: 'ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ…',
+      appTitle: 'ਐਸਆਰ ਟੈਸਟ ਕੋਡ',
+      footerOwner: 'ਲਖਵਿੰਦਰ ਸਿੰਘ',
+      cpy: 'ਕਾਪੀਰਾਈਟ © 2026 — ਸਾਰੇ ਹੱਕ ਰਾਖਵੇਂ ਹਨ।',
+      questions: 'ਪ੍ਰਸ਼ਨ',
+      settingsAria: 'ਏਆਈ ਸੈਟਿੰਗਾਂ',
+      learnKicker: 'ਤੁਹਾਡੀ ਤਰੱਕੀ', learnTitle: 'ਸਿੱਖਣਾ ਜਾਰੀ ਰੱਖੋ', readiness: 'ਕੁੱਲ ਸਹੀ ਦਰ',
+      tests: 'ਟੈਸਟ', accuracy: 'ਸਹੀ ਦਰ', weak: 'ਦੁਹਰਾਓ', days: 'ਦਿਨ',
+      continue: 'ਜਾਰੀ ਰੱਖੋ', mistakes: 'ਗਲਤੀਆਂ', progress: 'ਤਰੱਕੀ', categories: 'ਸ਼੍ਰੇਣੀਆਂ',
+      categoriesSub: 'ਲਾਇਸੈਂਸ ਜਾਂ ਟੈਸਟ ਚੁਣੋ', offlineReady: 'ਆਫਲਾਈਨ ਤਸਵੀਰਾਂ ਤਿਆਰ', offlineNeed: 'ਤਸਵੀਰਾਂ ਤਿਆਰ ਕਰੋ'
+    }
+  };
+
+  function t(key) {
+    var d = I18N[currentLang] || I18N.pt;
+    return (d[key] !== undefined) ? d[key] : I18N.pt[key];
+  }
+
+  /* ================= categorias (espelho do desktkop opcoesexame.html) ====
+     Ordem e títulos iguais aos boxes da versão desktop. A categoria 6 usa
+     o catálogo A/A1; 9 = TVDE; 10 = Táxi. Art: testes_exame/img/*.png.  */
+  var CATS = [
+    { id: 1,  tipo: 'AM',       art: 'assets/img/categories/category-am.png', emoji: '🛵' },
+    { id: 6,  tipo: 'A/A1',     art: 'assets/img/categories/category-a-a1.png', emoji: '🏍' },
+    { id: 2,  tipo: 'A/A2',     art: 'assets/img/categories/category-a-a2.png', emoji: '🏍' },
+    { id: 3,  tipo: 'B/B1',     art: 'assets/img/categories/category-b-b1.png', emoji: '🚗' },
+    { id: 4,  tipo: 'C/C1',     art: 'assets/img/categories/category-c-c1.png', emoji: '🚚' },
+    { id: 5,  tipo: 'D/D1',     art: 'assets/img/categories/category-d-d1.png', emoji: '🚌' },
+    { id: 7,  tipo: 'Mercadorias', art: 'assets/img/categories/category-cam-goods.png', emoji: '🚛' },
+    { id: 8,  tipo: 'Passageiros', art: 'assets/img/categories/category-cam-passengers.png', emoji: '🚌' },
+    { id: 9,  tipo: 'TVDE',     art: 'assets/img/categories/category-tvde.png', emoji: '🚘' },
+    { id: 10, tipo: 'Táxi',     art: 'assets/img/categories/category-taxi.png', emoji: '🚕' }
+  ];
+
+  var CAT_NAMES = {
+    pt: {
+      1: 'Categoria AM', 2: 'Categoria A e A2', 3: 'Categoria B e B1',
+      4: 'Categoria C e C1', 5: 'Categoria D e D1', 6: 'Categoria A e A1',
+      7: 'CAM / Mercadorias', 8: 'CAM / Passageiros', 9: 'TVDE', 10: 'Táxi'
+    },
+    en: {
+      1: 'Category AM', 2: 'Category A and A2', 3: 'Category B and B1',
+      4: 'Category C and C1', 5: 'Category D and D1', 6: 'Category A and A1',
+      7: 'CAM / Goods', 8: 'CAM / Passengers', 9: 'TVDE', 10: 'Taxi'
+    },
+    pa: {
+      1: 'ਸ਼੍ਰੇਣੀ AM', 2: 'ਸ਼੍ਰੇਣੀ A ਅਤੇ A2', 3: 'ਸ਼੍ਰੇਣੀ B ਅਤੇ B1',
+      4: 'ਸ਼੍ਰੇਣੀ C ਅਤੇ C1', 5: 'ਸ਼੍ਰੇਣੀ D ਅਤੇ D1', 6: 'ਸ਼੍ਰੇਣੀ A ਅਤੇ A1',
+      7: 'CAM / ਮਾਲ', 8: 'CAM / ਯਾਤਰੀ', 9: 'TVDE', 10: 'ਟੈਕਸੀ'
+    }
+  };
+
+  function catName(id) {
+    var d = CAT_NAMES[currentLang] || CAT_NAMES.pt;
+    return (d[id] !== undefined) ? d[id] : CAT_NAMES.pt[id];
+  }
+
+  var counts = {}; /* catId -> numPerg (tamanho do exame) */
+
+  /* ================= renderização ====================================== */
+  function renderStatic() {
+    var ids = ['langBtn', 'loadingText', 'footerOwner', 'footerCpy', 'settingsBtn'];
+    for (var i = 0; i < ids.length; i++) {
+      var el = document.getElementById(ids[i]);
+      if (!el) continue; /* o elemento pode ter sido removido pelo renderGrid */
+      if (ids[i] === 'langBtn') { el.textContent = LANG_LABEL[currentLang]; el.title = LANG_LABEL[currentLang]; }
+      else if (ids[i] === 'loadingText') el.textContent = t('loading');
+      else if (ids[i] === 'footerOwner') el.textContent = t('footerOwner');
+      else if (ids[i] === 'footerCpy') el.textContent = t('cpy');
+      else if (ids[i] === 'settingsBtn') el.setAttribute('aria-label', t('settingsAria'));
+    }
+    var labels = { learnKicker:'learnKicker', learnTitle:'learnTitle', readinessLabel:'readiness', statTestsL:'tests', statAccuracyL:'accuracy', statWeakL:'weak', statStreakL:'days', continueLabel:'continue', weakLabel:'mistakes', progressLabel:'progress', categoriesTitle:'categories', categoriesSub:'categoriesSub' };
+    Object.keys(labels).forEach(function (id) { var el = document.getElementById(id); if (el) el.textContent = t(labels[id]); });
+  }
+
+  function renderLearningDashboard() {
+    var s = window.IMTLearning ? window.IMTLearning.summary() : {tests:0,accuracy:0,weak:0,streak:0,lastCategory:3,lastTestType:1};
+    var pct = Math.max(0, Math.min(100, Number(s.accuracy) || 0));
+    var ring = document.getElementById('readinessRing');
+    if (ring) ring.style.background = 'conic-gradient(#ffffff ' + pct + '%, rgba(255,255,255,.22) ' + pct + '%)';
+    var vals = { readinessPct:pct+'%', statTests:s.tests||0, statAccuracy:pct+'%', statWeak:s.weak||0, statStreak:s.streak||0 };
+    Object.keys(vals).forEach(function(id){ var el=document.getElementById(id); if(el) el.textContent=vals[id]; });
+    var c = document.getElementById('continueBtn');
+    if (c) c.onclick = function () { window.location.href = 'categories.html?' + (s.lastCategory || 3); };
+  }
+
+  function renderGrid() {
+    var grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    CATS.forEach(function (cat) {
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'cat-card';
+      card.setAttribute('data-cat', cat.id);
+      card.setAttribute('aria-label', catName(cat.id));
+
+      var num = (counts[cat.id] !== undefined) ? counts[cat.id] : null;
+
+      var art;
+      if (num === null || num > 0) {
+        art = document.createElement('img');
+        art.className = 'cat-art';
+        art.src = cat.art;
+        art.alt = '';
+        art.onerror = function () {
+          var em = document.createElement('span');
+          em.className = 'cat-emoji';
+          em.textContent = cat.emoji;
+          art.replaceWith(em);
+        };
+      } else {
+        art = document.createElement('span');
+        art.className = 'cat-emoji';
+        art.textContent = '🚫';
+      }
+
+      var name = document.createElement('div');
+      name.className = 'cat-name';
+      name.textContent = catName(cat.id);
+
+      var count = document.createElement('div');
+      count.className = 'cat-count';
+      if (num !== null && num > 0) {
+        count.innerHTML = '<b>' + num + '</b> ' + t('questions');
+      } else if (num === 0) {
+        count.textContent = '—';
+      }
+
+      card.appendChild(art);
+      card.appendChild(name);
+      card.appendChild(count);
+      card.addEventListener('click', async function () {
+        if (window.IMTAccess && !(await window.IMTAccess.request(cat.id))) return;
+        window.location.href = 'categories.html?' + cat.id;
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  function applyLang() {
+    try { localStorage.setItem('sr_lang', currentLang); } catch (e) {}
+    renderStatic();
+    renderGrid();
+    renderLearningDashboard();
+  }
+
+  /* ================= arranque =========================================== */
+  function fatal() {
+    var grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    var note = document.createElement('div');
+    note.className = 'note';
+    note.textContent = 'Não foi possível efetuar ligação com a base de dados. Feche e volte a abrir a aplicação.';
+    grid.appendChild(note);
+  }
+
+  function boot() {
+    var ready = (typeof window.dbReady === 'function')
+      ? window.dbReady()
+      : new Promise(function (resolve, reject) {
+          var n = 0;
+          (function poll() {
+            if (typeof window.db !== 'undefined' && typeof window.db.exec === 'function') return resolve();
+            if (++n > 300) return reject(Error('db timeout')); /* 30 s */
+            setTimeout(poll, 100);
+          })();
+        });
+
+    var timeout = new Promise(function (_, reject) {
+      setTimeout(function () { reject(Error('db timeout')); }, 30000);
+    });
+
+    Promise.race([ready, timeout])
+      .then(async function () {
+        /* Permissões lidas para fidelidade com o desktop, mas no telemóvel
+           mostram-se sempre todas as categorias (mesmo com flags a 0). */
+        try {
+          var perms = await getAllPermitions();
+          if (perms && perms.length) {
+            perms.forEach(function (p) { decryptSN(p.enabled); });
+          }
+        } catch (e) { /* permissões são apenas informativas */ }
+
+        try {
+          var rows = await window.db.exec(
+            'SELECT id, numPerg FROM categoria ORDER BY id', 'get'
+          );
+          rows.forEach(function (r) { counts[r.id] = Number(r.numPerg) || 0; });
+        } catch (e) {
+          /* sem contagens: cartões aparecem na mesma */
+        }
+
+        renderGrid();
+      })
+      .catch(fatal);
+  }
+
+  async function setupImagePack() {
+    var card = document.getElementById('imagePackCard');
+    var button = document.getElementById('imagePackBtn');
+    var overlay = document.getElementById('imageInstallOverlay');
+    var statusText = document.getElementById('imageInstallStatus');
+    var progress = document.getElementById('imageInstallProgress');
+    var offlineState = document.getElementById('offlineState');
+    if (!window.IMTImagePack || !window.IMTImagePack.isNative()) {
+      if (offlineState) offlineState.textContent = t('offlineNeed');
+      return;
+    }
+    var state;
+    try { state = await window.IMTImagePack.status(); } catch (e) { state = { installed:false }; }
+    if (state && state.installed) {
+      card.hidden = true;
+      if (offlineState) offlineState.textContent = t('offlineReady');
+      return;
+    }
+    card.hidden = false;
+    if (offlineState) offlineState.textContent = t('offlineNeed');
+    button.onclick = async function () {
+      if (button.disabled) return;
+      button.disabled = true;
+      overlay.hidden = false;
+      progress.style.width = '4%';
+      statusText.textContent = 'A iniciar transferência…';
+      try {
+        await window.IMTImagePack.install(function (event) {
+          statusText.textContent = (event.message || 'A preparar imagens…') + (event.percent != null ? ' ' + event.percent + '%' : '');
+          if (event.percent != null) progress.style.width = Math.max(4, Math.min(100, Number(event.percent) || 0)) + '%';
+        });
+        try { localStorage.setItem('imt27_images_installed', '1'); } catch (e) {}
+        progress.style.width = '100%';
+        overlay.hidden = true;
+        card.hidden = true;
+        if (offlineState) offlineState.textContent = t('offlineReady');
+      } catch (err) {
+        overlay.hidden = true;
+        card.hidden = false;
+        button.disabled = false;
+        var copy = document.getElementById('imagePackText');
+        if (copy) copy.textContent = 'Falha ao descarregar. Verifique a ligação e tente novamente.';
+      }
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    renderStatic();
+    document.getElementById('langBtn').addEventListener('click', function () {
+      currentLang = LANG_CYCLE[currentLang];
+      applyLang();
+    });
+    document.getElementById('settingsBtn').addEventListener('click', function () {
+      window.location.href = 'settings.html';
+    });
+    document.getElementById('weakBtn').addEventListener('click', function () { window.location.href = 'weak.html'; });
+    document.getElementById('progressBtn').addEventListener('click', function () { window.location.href = 'progress.html'; });
+    renderLearningDashboard();
+    setupImagePack();
+    boot();
+  });
+})();
+</script>
+</body>
+</html>

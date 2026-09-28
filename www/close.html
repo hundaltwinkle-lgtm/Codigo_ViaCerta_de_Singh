@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#b52f2a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Sair — SR Testes Código</title>
+<link rel="stylesheet" href="css/mobile-base.css">
+<link rel="stylesheet" href="css/exam.css">
+<!-- Ordre de carga (bridge): mobile-apputil (AppUtil.App.Exit) -->
+<script src="js/mobile-apputil.js"></script>
+</head>
+<body class="close-page">
+
+<main class="close-wrap safe-top safe-bottom">
+  <div class="card close-card">
+    <div class="close-logo">SR</div>
+    <h1 id="closeTitle">Pretende fechar a aplicação?</h1>
+    <div class="close-actions">
+      <button type="button" class="btn btn-primary" id="btnExit">Fechar aplicação</button>
+      <button type="button" class="btn" id="btnContinue">Continuar</button>
+    </div>
+    <p class="muted" id="closeNote" style="display:none"></p>
+  </div>
+</main>
+
+<script>
+/* =====================================================================
+   close.html — confirmação de saída (espelha o close.html do desktop)
+   - "Fechar aplicação" -> AppUtil.App.Exit (Capacitor App.exitApp)
+   - Em browser plano (sem Capacitor) tenta window.close(); se não for
+     possível, volta ao menu (a app nunca fica presa).
+   ===================================================================== */
+'use strict';
+function $id(id) { return document.getElementById(id); }
+
+var UI = {
+  pt: { title: 'Pretende fechar a aplicação?', exit: 'Fechar aplicação', cont: 'Continuar',
+    webNote: 'Neste ambiente web a aplicação não pode ser encerrada; a voltar ao menu.' },
+  en: { title: 'Do you want to close the app?', exit: 'Close app', cont: 'Continue',
+    webNote: 'In this web environment the app cannot be closed; returning to the menu.' },
+  pa: { title: 'ਕੀ ਤੁਸੀਂ ਐਪ ਬੰਦ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?', exit: 'ਐਪ ਬੰਦ ਕਰੋ', cont: 'ਜਾਰੀ ਰੱਖੋ',
+    webNote: 'ਇਸ ਵੈੱਬ ਵਾਤਾਵਰਣ ਵਿੱਚ ਐਪ ਬੰਦ ਨਹੀਂ ਕੀਤੀ ਜਾ ਸਕਦੀ; ਮੀਨੂ ਵੱਲ ਵਾਪਸ ਜਾ ਰਹੇ ਹਾਂ।' }
+};
+function getLang() {
+  try {
+    var saved = localStorage.getItem('sr_lang');
+    if (saved && ['pt', 'en', 'pa'].indexOf(saved) >= 0) return saved;
+  } catch (e) { /* ignore */ }
+  return 'pt';
+}
+var currentLang = getLang();
+function ui(key) { return (UI[currentLang] && UI[currentLang][key]) || UI.pt[key] || key; }
+
+$id('closeTitle').textContent = ui('title');
+$id('btnExit').textContent = ui('exit');
+$id('btnContinue').textContent = ui('cont');
+
+$id('btnContinue').addEventListener('click', function () { window.location.href = 'menu.html'; });
+
+$id('btnExit').addEventListener('click', function () {
+  var exited = false;
+  if (window.AppUtil && typeof window.AppUtil.App.Exit === 'function') {
+    try { exited = window.AppUtil.App.Exit(); } catch (e) { exited = false; }
+  }
+  if (exited) return; /* Capacitor trata do encerramento */
+  /* browser plano: tentar fechar a janela; senão voltar ao menu */
+  try { window.close(); } catch (e) { /* ignore */ }
+  setTimeout(function () {
+    var note = $id('closeNote');
+    note.style.display = 'block';
+    note.textContent = ui('webNote');
+    setTimeout(function () { window.location.href = 'menu.html'; }, 1400);
+  }, 250);
+});
+</script>
+</body>
+</html>

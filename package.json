@@ -1,0 +1,60 @@
+{
+  "name": "imt-27-codigo",
+  "version": "2.0.1",
+  "description": "IMT_27 Código — multilingual Portuguese driving theory and TVDE learning application with Portuguese, English and Punjabi support.",
+  "private": true,
+  "author": {
+    "name": "Lakhwinder Singh"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/hundaltwinkle-lgtm/imt-27-codigo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hundaltwinkle-lgtm/imt-27-codigo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hundaltwinkle-lgtm/imt-27-codigo/issues"
+  },
+  "keywords": [
+    "imt",
+    "imt-27",
+    "codigo",
+    "codigo-da-estrada",
+    "portugal",
+    "driving-theory",
+    "driving-test",
+    "tvde",
+    "cmtvde",
+    "android",
+    "capacitor",
+    "sqlite",
+    "portuguese",
+    "english",
+    "punjabi",
+    "gurmukhi",
+    "offline-learning"
+  ],
+  "scripts": {
+    "sync": "cap sync android && node scripts/build/remove_android_db_copy.mjs",
+    "add:android": "cap add android",
+    "build:apk": "npm run sync && cd android && gradlew.bat assembleRelease",
+    "build:debug": "npm run sync && cd android && gradlew.bat assembleDebug",
+    "check:db": "python scripts/database/check_single_db.py",
+    "preflight:release": "node scripts/build/preflight_release.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "6.2.0",
+    "@capacitor/app": "6.0.3",
+    "@capacitor/core": "6.2.0",
+    "@capacitor/filesystem": "6.0.4",
+    "@capacitor/status-bar": "6.0.3",
+    "sql.js": "1.13.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "6.2.2"
+  },
+  "engines": {
+    "node": ">=18",
+    "npm": ">=9"
+  }
+}

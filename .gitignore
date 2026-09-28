@@ -1,0 +1,47 @@
+﻿# Node
+node_modules/
+npm-debug.log*
+
+# Android / Gradle generated files
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# Generated Capacitor Android assets DB
+android/app/src/main/assets/public/assets/db/*.db
+
+# Build output
+_OUTPUT/
+_build_logs/
+build/
+dist/
+
+# APK / Android packages
+*.apk
+*.aab
+*.apks
+
+# Signing keys / secrets
+*.jks
+*.keystore
+*.p12
+keystore.properties
+_PRIVATE_RELEASE/
+**/_PRIVATE_RELEASE/
+
+# Release packages kept on GitHub Releases
+releases/
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+*.TESTBACKUP
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#b52f2a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Resultado — SR Testes Código</title>
+<link rel="stylesheet" href="css/mobile-base.css">
+<link rel="stylesheet" href="css/exam.css">
+<!-- Ordre de carga (bridge): jquery -> mobile-db -> mobile-ai -> mobile-tts ->
+     mobile-apputil -> DBPerguntas -> script da página -->
+<script src="lib/jquery.min.js"></script>
+<script src="js/mobile-db.js"></script>
+<script src="js/mobile-ai.js"></script>
+<script src="js/mobile-tts.js"></script>
+<script src="js/mobile-apputil.js"></script>
+<script src="js/learning.js"></script>
+<script src="db/DBPerguntas.js"></script>
+</head>
+<body class="result-page">
+
+<div class="app-bar ex-top safe-top">
+  <button type="button" class="icon-btn" id="resBack" aria-label="Menu">&#9776;</button>
+  <div class="app-title" id="resTitle">Resultado</div>
+</div>
+
+<main class="page ex-main safe-bottom" id="resMain">
+  <div id="loading" class="ex-loading">
+    <div class="loader-orbit" aria-hidden="true"></div>
+    <h2 id="loadTitle">A calcular o resultado…</h2>
+  </div>
+
+  <div id="resultBox" style="display:none">
+    <div class="res-verdict card" id="resVerdict">
+      <div class="res-ring" id="resRing">
+        <div class="res-ring-inner">
+          <span class="res-pct" id="resPct">0%</span>
+          <span class="res-pct-label" id="resPctLabel">Certas</span>
+        </div>
+      </div>
+      <div class="res-verdict-text">
+        <h2 id="resApproved" class="res-approved" style="display:none">Aprovado</h2>
+        <h2 id="resFailed" class="res-failed" style="display:none">Reprovado</h2>
+        <p class="muted" id="resCatName"></p>
+      </div>
+    </div>
+
+    <div class="res-stats card">
+      <div class="res-stat"><span class="res-stat-num res-stat-ok" id="statOk">0</span><span class="muted" id="statOkL">Certas</span></div>
+      <div class="res-stat"><span class="res-stat-num res-stat-bad" id="statBad">0</span><span class="muted" id="statBadL">Erradas</span></div>
+      <div class="res-stat"><span class="res-stat-num res-stat-blank" id="statBlank">0</span><span class="muted" id="statBlankL">Brancas</span></div>
+      <div class="res-stat"><span class="res-stat-num" id="statTotal">0</span><span class="muted" id="statTotalL">Total</span></div>
+    </div>
+
+    <div class="card" id="themeCard" style="display:none">
+      <h3 class="res-theme-title" id="themeTitle">Por tema</h3>
+      <div id="themeList"></div>
+    </div>
+
+    <div class="res-actions">
+      <button type="button" class="btn btn-primary" id="btnReview">Rever Teste</button>
+      <button type="button" class="btn" id="btnNew">Novo Teste</button>
+      <button type="button" class="btn btn-ghost" id="btnMenu">Menu</button>
+    </div>
+  </div>
+</main>
+
+<script>
+/* =====================================================================
+   result.html — resultado do teste (réplica do teste_exame_finalizado.html)
+   ---------------------------------------------------------------------
+   - getAnswersSafe(vars[4]) -> bloco ",<resposta>,<qid>,<num>,<order>;"
+   - correctStatement / notCorrectStatement / wrongStatement EXATAMENTE
+     como o desktop (correcta like 'X' — SQLite LIKE é insensível a maiúsculas)
+   - getThemesByCat dá totalC (certas) e totalNoC (erradas+brancas)
+   - Aprovado = totalNoC <= pergAprov && totalC > 0
+   - updateWrongQuestions (tracker "mais erradas") uma vez por respostasId
+   ===================================================================== */
+'use strict';
+
+function detectLanguage(varsArr) {
+  if (typeof varsArr == 'undefined' || !varsArr) return 'pt';
+  for (var i = varsArr.length - 1; i >= 0; i--) {
+    var value = String(varsArr[i] || '').trim().toLowerCase();
+    if (value === 'pt' || value === 'en' || value === 'pa') return value;
+  }
+  return 'pt';
+}
+function waitForDb(callback, attempt) {
+  attempt = attempt || 0;
+  if (window.db && typeof window.db.exec === 'function') { callback(); return; }
+  if (attempt >= 300) {
+    var el = $id('loading');
+    if (el) el.innerHTML = '<h2>Não foi possível efetuar ligação com a base de dados</h2>';
+    return;
+  }
+  setTimeout(function () { waitForDb(callback, attempt + 1); }, 100);
+}
+function $id(id) { return document.getElementById(id); }
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+var UI = {
+  pt: { title: 'Resultado', computing: 'A calcular o resultado…',
+    approved: 'Aprovado', failed: 'Reprovado', practiceDone: 'Prática concluída',
+    ok: 'Certas', bad: 'Erradas', blank: 'Brancas', total: 'Total', pctLabel: 'Certas',
+    themeTitle: 'Por tema', review: 'Rever Teste', newTest: 'Novo Teste', menu: 'Menu',
+    errLabel: 'Erro a calcular o resultado', noAnswers: 'Não foi possível ler as respostas do teste.',
+    catSr: ' - Testes Segurança Rodoviária', catImt: ' - Testes IMT' },
+  en: { title: 'Result', computing: 'Calculating your result…',
+    approved: 'Approved', failed: 'Failed', practiceDone: 'Practice completed',
+    ok: 'Correct', bad: 'Wrong', blank: 'Blank', total: 'Total', pctLabel: 'Correct',
+    themeTitle: 'By topic', review: 'Review Test', newTest: 'New Test', menu: 'Menu',
+    errLabel: 'Error calculating result', noAnswers: 'Could not read the test answers.',
+    catSr: ' - Road Safety Tests', catImt: ' - IMT Tests' },
+  pa: { title: 'ਨਤੀਜਾ', computing: 'ਨਤੀਜਾ ਗਿਣਿਆ ਜਾ ਰਿਹਾ ਹੈ…',
+    approved: 'ਪਾਸ', failed: 'ਫੇਲ੍ਹ', practiceDone: 'ਅਭਿਆਸ ਪੂਰਾ ਹੋਇਆ',
+    ok: 'ਸਹੀ', bad: 'ਗਲਤ', blank: 'ਖਾਲੀ', total: 'ਕੁੱਲ', pctLabel: 'ਸਹੀ',
+    themeTitle: 'ਵਿਸ਼ੇ ਅਨੁਸਾਰ', review: 'ਟੈਸਟ ਦੀ ਸਮੀਖਿਆ ਕਰੋ', newTest: 'ਨਵਾਂ ਟੈਸਟ', menu: 'ਮੀਨੂ',
+    errLabel: 'ਨਤੀਜਾ ਗਿਣਨ ਵਿੱਚ ਗਲਤੀ', noAnswers: 'ਟੈਸਟ ਦੇ ਜਵਾਬ ਨਹੀਂ ਪੜ੍ਹੇ ਜਾ ਸਕੇ।',
+    catSr: ' - ਸੜਕ ਸੁਰੱਖਿਆ ਟੈਸਟ', catImt: ' - IMT ਟੈਸਟ' }
+};
+function ui(key) { return (UI[currentLang] && UI[currentLang][key]) || UI.pt[key] || key; }
+
+var url = window.location.href;
+var variables = url.split('?');
+var vars = ((variables[1] || '') + '').split(',');
+var currentLang = 'pt';
+
+(function () {
+  var detected = detectLanguage(vars);
+  var saved = null;
+  try { saved = localStorage.getItem('sr_lang'); } catch (e) { /* ignore */ }
+  currentLang = detected !== 'pt' ? detected : (saved || 'pt');
+  if (['pt', 'en', 'pa'].indexOf(currentLang) < 0) currentLang = 'pt';
+})();
+
+/* spec: o vars[5]=spec=X troca o cat do vars[0] (igual ao desktop) */
+if (vars[5] != null && String(vars[5]).split('=')[0] == 'spec') {
+  var subCatId = String(vars[5]).split('=')[1];
+  vars[5] = 'spec=' + vars[0];
+  vars[0] = subCatId;
+}
+
+var totalCCounter = 0, totalNoCCounter = 0, minimumToPass = 3;
+var paperLen = 0, branchCount = 0;
+var catId = 0, catName = '', type = 0;
+var isPractice = (vars.some(function (v) { return String(v || '').indexOf('practice=') === 0; }));
+var runToken = (function () {
+  for (var i = 0; i < vars.length; i++) if (String(vars[i] || '').indexOf('run=') === 0) return String(vars[i]).slice(4);
+  return 'legacy-' + String(vars[4] || '0');
+})();
+
+var correctStatement = '(id = -1)';
+var notCorrectStatement = '(id = -1)';
+var wrongStatement = '(id = -1)';
+var themeSnapshot = [], wrongIdsSnapshot = [], correctIdsSnapshot = [];
+
+async function UpdateTeste() {
+  try {
+    var questions = await getAnswersSafe(vars[4]);
+    /* Fallback da mesma navegação: a escrita SQLite pode não sobreviver à
+       troca imediata de página em alguns WebViews. exam.html deixa uma cópia
+       temporária da resposta nesta sessão, sempre associada ao mesmo id. */
+    if (!questions.length || questions[0].resultado == null) {
+      try {
+        var cachedAnswers = sessionStorage.getItem('sr_result_answers_' + vars[4]);
+        if (cachedAnswers == null) cachedAnswers = localStorage.getItem('sr_result_answers_' + vars[4]);
+        if (cachedAnswers != null) questions = [{ resultado: cachedAnswers }];
+      } catch (eCache) { /* armazenamento web indisponível: usar só a BD */ }
+    }
+    if (!questions.length || questions[0].resultado == null) { showError(ui('noAnswers')); return; }
+
+    questions.forEach(function (element) {
+      var answers = String(element.resultado);
+      var aswArr = answers.split(';');
+      for (var k = 0; k < aswArr.length; k++) {
+        var parts = aswArr[k].split(',');
+        var correct = (parts[1] == '' || parts[1] == undefined) ? -1 : parts[1];
+        var id = (parts[2] == undefined || parts[2] == '') ? -1 : parts[2];
+        correctStatement += ' or (id = ' + id + ' and correcta like \'' + correct + '\')';
+        notCorrectStatement += ' or (id = ' + id + ' and correcta not like \'' + correct + '\')';
+        if (parts[1] != '-1') wrongStatement += ' or (id = ' + id + ' and correcta not like \'' + correct + '\')';
+        if (id != -1 && id != null && String(id) !== 'null') paperLen++;
+        if (parts[1] === '') branchCount++;
+      }
+    });
+
+    var currentCat = await getCurrentCat(vars[0]);
+    currentCat.forEach(function (element) {
+      catId = vars[0];
+      catName = element.nome;
+      minimumToPass = element.pergAprov;
+      type = vars[1];
+    });
+
+    /* IDs corretos/errados deste teste. A consulta não filtra pela categoria
+       para também funcionar na categoria A1 combinada (cat 6 => A + B). */
+    try {
+      var _wrongRows = await window.db.exec('SELECT id FROM perguntas WHERE (' + wrongStatement + ')', 'get');
+      wrongIdsSnapshot = (_wrongRows || []).map(function (r) { return Number(r.id); }).filter(Boolean);
+      var _correctRows = await window.db.exec('SELECT id FROM perguntas WHERE (' + correctStatement + ')', 'get');
+      correctIdsSnapshot = (_correctRows || []).map(function (r) { return Number(r.id); }).filter(Boolean);
+    } catch (eIds) { wrongIdsSnapshot = []; correctIdsSnapshot = []; }
+
+    /* contador histórico da BD, guardado apenas uma vez por execução */
+    var guardKey = 'sr_erradas_' + vars[4] + '_' + runToken;
+    var done = false;
+    try { done = sessionStorage.getItem(guardKey) === '1'; } catch (e) { /* ignore */ }
+    if (!done) {
+      if (wrongIdsSnapshot.length) await updateWrongQuestions(wrongIdsSnapshot);
+      try { sessionStorage.setItem(guardKey, '1'); } catch (e) { /* ignore */ }
+    }
+
+    var themes;
+    if (catId != 6) {
+      themes = await getThemesByCat(catId, correctStatement, notCorrectStatement, type);
+      themes.forEach(function (element) {
+        totalCCounter += parseInt(element.totalC) || 0;
+        totalNoCCounter += parseInt(element.totalNoC) || 0;
+        themeSnapshot.push({ catId: Number(catId), themeId: Number(element.tema), name: element.nome || '', nameEn: element.nome_en || '', correct: Number(element.totalC) || 0, wrong: Number(element.totalNoC) || 0 });
+        renderThemeRow(element.nome, element.nome_en, element.totalC, element.totalNoC);
+      });
+    } else {
+      var themesA = await getThemesByCat(2, correctStatement, notCorrectStatement, type);
+      themesA.forEach(function (element) {
+        totalCCounter += parseInt(element.totalC) || 0;
+        totalNoCCounter += parseInt(element.totalNoC) || 0;
+        themeSnapshot.push({ catId: 2, themeId: Number(element.tema), name: element.nome || '', nameEn: element.nome_en || '', correct: Number(element.totalC) || 0, wrong: Number(element.totalNoC) || 0 });
+        renderThemeRow(element.nome, element.nome_en, element.totalC, element.totalNoC);
+      });
+      var themesB = await getThemesByCat(3, correctStatement, notCorrectStatement, type);
+      themesB.forEach(function (element) {
+        totalCCounter += parseInt(element.totalC) || 0;
+        totalNoCCounter += parseInt(element.totalNoC) || 0;
+        themeSnapshot.push({ catId: 3, themeId: Number(element.tema), name: element.nome || '', nameEn: element.nome_en || '', correct: Number(element.totalC) || 0, wrong: Number(element.totalNoC) || 0 });
+        renderThemeRow(element.nome, element.nome_en, element.totalC, element.totalNoC);
+      });
+    }
+
+    render();
+  } catch (err) {
+    console.error('[result] Erro:', err);
+    showError(ui('errLabel') + ': ' + String(err && err.message || err).slice(0, 160));
+  }
+}
+
+function renderThemeRow(nome, nomeEn, totalC, totalNoC) {
+  var row = document.createElement('div');
+  row.className = 'res-theme-row';
+  var tC = parseInt(totalC) || 0, tNoC = parseInt(totalNoC) || 0;
+  if (tC + tNoC === 0) return; /* só temas com perguntas do teste */
+  var name = nome;
+  if (currentLang == 'en' && nomeEn) name = nomeEn;
+  row.innerHTML = '<span class="res-theme-name">' + escapeHtml(name) + '</span>'
+    + '<span class="res-theme-counts"><span class="res-theme-ok">' + tC + '</span>'
+    + '<span class="res-theme-bad">' + tNoC + '</span></span>';
+  $id('themeList').appendChild(row);
+}
+
+function render() {
+  var c = totalCCounter, n = totalNoCCounter;
+  var blank = branchCount;
+  var wrong = n - blank;
+  if (wrong < 0) wrong = 0;
+  var pct = paperLen > 0 ? Math.round((c * 100) / paperLen) : 0;
+
+  $id('statOk').textContent = c;
+  $id('statBad').textContent = wrong;
+  $id('statBlank').textContent = blank;
+  $id('statTotal').textContent = paperLen;
+
+  var ring = $id('resRing');
+  ring.style.background = 'conic-gradient(var(--sr-green) ' + pct + '%, var(--border) ' + pct + '%)';
+  $id('resPct').textContent = pct + '%';
+
+  var approved = (n <= minimumToPass) && (c > 0);
+
+  /* Perfil de aprendizagem local: uma gravação por respostasId. */
+  if (window.IMTLearning) {
+    var learningGuard = 'imt27_learning_recorded_' + String(vars[4] || '') + '_' + runToken;
+    var alreadyRecorded = false;
+    try { alreadyRecorded = localStorage.getItem(learningGuard) === '1'; } catch (eLG) {}
+    if (!alreadyRecorded) {
+      try {
+        window.IMTLearning.recordResult({
+          answersId: String(vars[4] || '') + ':' + runToken, catId: Number(catId), testType: Number(type || 1),
+          correct: c, wrong: wrong, blank: blank, total: paperLen, approved: approved, practice: isPractice,
+          themes: themeSnapshot, wrongIds: wrongIdsSnapshot, correctIds: correctIdsSnapshot
+        });
+        localStorage.setItem(learningGuard, '1');
+      } catch (eLearn) { console.warn('[result] learning profile:', eLearn && eLearn.message || eLearn); }
+    }
+  }
+  $id('resApproved').style.display = approved ? 'block' : 'none';
+  $id('resFailed').style.display = approved ? 'none' : 'block';
+  if (isPractice) {
+    $id('resApproved').textContent = ui('practiceDone');
+    $id('resFailed').textContent = ui('practiceDone');
+  }
+
+  var catSuffix = (type == 9) ? ui('catImt') : ui('catSr');
+  var showName = catName + catSuffix;
+  $id('resCatName').textContent = showName;
+
+  $id('loading').style.display = 'none';
+  $id('resultBox').style.display = 'block';
+  var themeRows = document.querySelectorAll('#themeList .res-theme-row');
+  $id('themeCard').style.display = themeRows.length ? 'block' : 'none';
+
+  refreshStrings();
+}
+
+function refreshStrings() {
+  $id('resTitle').textContent = ui('title');
+  $id('loadTitle').textContent = ui('computing');
+  $id('statOkL').textContent = ui('ok');
+  $id('statBadL').textContent = ui('bad');
+  $id('statBlankL').textContent = ui('blank');
+  $id('statTotalL').textContent = ui('total');
+  $id('resPctLabel').textContent = ui('pctLabel');
+  $id('themeTitle').textContent = ui('themeTitle');
+  $id('btnReview').textContent = ui('review');
+  $id('btnNew').textContent = ui('newTest');
+  $id('btnMenu').textContent = ui('menu');
+  if (!isPractice) {
+    $id('resApproved').textContent = ui('approved');
+    $id('resFailed').textContent = ui('failed');
+  }
+}
+
+function showError(msg) {
+  var el = $id('loading');
+  if (el) el.innerHTML = '<h2>' + escapeHtml(msg) + '</h2>';
+}
+
+/* ---------- links ---------- */
+$id('btnReview').addEventListener('click', function () {
+  window.location.href = 'review.html?' + vars.join(',');
+});
+$id('btnNew').addEventListener('click', function () {
+  /* mesmo teste novo: cat,testType,autoMode,tema (+ spec) + lang, sem answersId */
+  var specVal = '';
+  if (vars[5] != null && String(vars[5]).split('=')[0] == 'spec') specVal = String(vars[5]).split('=')[1];
+  var rebuilt = [vars[0], vars[1], vars[2], vars[3], '', '', '', currentLang];
+  if (specVal) rebuilt[4] = 'spec=' + specVal;
+  window.location.href = 'exam.html?' + rebuilt.join(',');
+});
+$id('btnMenu').addEventListener('click', function () { window.location.href = 'menu.html'; });
+$id('resBack').addEventListener('click', function () { window.location.href = 'menu.html'; });
+
+setTimeout(function () {
+  waitForDb(function () { UpdateTeste(); });
+}, 500);
+</script>
+</body>
+</html>

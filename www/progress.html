@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b4f8a">
+<title>Progresso — IMT_27 Código</title>
+<link rel="stylesheet" href="css/mobile-base.css">
+<link rel="stylesheet" href="css/menu.css">
+</head>
+<body class="safe-top safe-bottom">
+<header class="app-bar">
+  <button class="icon-btn" id="backBtn" type="button" aria-label="Voltar">&#8249;</button>
+  <div class="app-title" id="pageTitle">Progresso</div><span class="spacer"></span>
+  <button class="lang-btn" id="langBtn" type="button">PT</button>
+</header>
+<main class="page"><div class="learn-page-wrap">
+  <section class="learn-summary-card"><h2 id="heroTitle">A sua aprendizagem</h2><p id="heroText">Use os resultados para decidir o que estudar a seguir.</p></section>
+  <div class="progress-grid">
+    <div class="progress-tile"><strong id="pAccuracy">0%</strong><span id="pAccuracyL">Precisão</span></div>
+    <div class="progress-tile"><strong id="pTests">0</strong><span id="pTestsL">Testes</span></div>
+    <div class="progress-tile"><strong id="pQuestions">0</strong><span id="pQuestionsL">Respostas</span></div>
+    <div class="progress-tile"><strong id="pWeak">0</strong><span id="pWeakL">A rever</span></div>
+  </div>
+  <div class="section-title" id="weakTitle">Áreas a melhorar</div><div class="learn-list" id="themes"></div>
+  <div class="section-title" id="catTitle">Por categoria</div><div class="learn-list" id="cats"></div>
+  <div class="section-title" id="recentTitle">Atividade recente</div><div class="learn-list" id="recent"></div>
+</div></main>
+<script src="js/learning.js"></script>
+<script>
+(function(){'use strict';
+var cycle={pt:'en',en:'pa',pa:'pt'}, label={pt:'PT',en:'EN',pa:'ਪੰਜਾਬੀ'},lang='pt';try{lang=localStorage.getItem('sr_lang')||'pt';}catch(e){}if(!cycle[lang])lang='pt';
+var U={pt:{title:'Progresso',hero:'A sua aprendizagem',text:'Use os resultados para decidir o que estudar a seguir.',accuracy:'Precisão',tests:'Testes',answers:'Respostas',weak:'A rever',weakT:'Áreas a melhorar',catT:'Por categoria',recent:'Atividade recente',none:'Complete alguns testes para criar o seu relatório.',q:'respostas',test:'teste',testsW:'testes',sr:'SR',imt:'IMT'},en:{title:'Progress',hero:'Your learning',text:'Use your results to decide what to study next.',accuracy:'Accuracy',tests:'Tests',answers:'Answers',weak:'To review',weakT:'Areas to improve',catT:'By category',recent:'Recent activity',none:'Complete some tests to build your learning report.',q:'answers',test:'test',testsW:'tests',sr:'Road Safety',imt:'IMT'},pa:{title:'ਤਰੱਕੀ',hero:'ਤੁਹਾਡੀ ਸਿੱਖਿਆ',text:'ਅਗਲਾ ਕੀ ਪੜ੍ਹਨਾ ਹੈ ਇਹ ਨਤੀਜਿਆਂ ਤੋਂ ਤੈਅ ਕਰੋ।',accuracy:'ਸਹੀ ਦਰ',tests:'ਟੈਸਟ',answers:'ਜਵਾਬ',weak:'ਦੁਹਰਾਓ',weakT:'ਸੁਧਾਰ ਵਾਲੇ ਖੇਤਰ',catT:'ਸ਼੍ਰੇਣੀ ਅਨੁਸਾਰ',recent:'ਹਾਲ ਦੀ ਸਰਗਰਮੀ',none:'ਆਪਣੀ ਰਿਪੋਰਟ ਬਣਾਉਣ ਲਈ ਕੁਝ ਟੈਸਟ ਪੂਰੇ ਕਰੋ।',q:'ਜਵਾਬ',test:'ਟੈਸਟ',testsW:'ਟੈਸਟ',sr:'SR',imt:'IMT'}};
+var C={pt:{1:'AM',2:'A/A2',3:'B/B1',4:'C/C1',5:'D/D1',6:'A/A1',7:'CAM Mercadorias',8:'CAM Passageiros',9:'TVDE',10:'Táxi'},en:{1:'AM',2:'A/A2',3:'B/B1',4:'C/C1',5:'D/D1',6:'A/A1',7:'CAM Goods',8:'CAM Passengers',9:'TVDE',10:'Taxi'},pa:{1:'AM',2:'A/A2',3:'B/B1',4:'C/C1',5:'D/D1',6:'A/A1',7:'CAM ਮਾਲ',8:'CAM ਯਾਤਰੀ',9:'TVDE',10:'ਟੈਕਸੀ'}};
+function t(k){return(U[lang]&&U[lang][k])||U.pt[k]||k;}function cat(id){return(C[lang]&&C[lang][id])||C.pt[id]||String(id);}function pct(v){return Math.max(0,Math.min(100,Number(v)||0));}
+function empty(el){el.innerHTML='<div class="learn-empty"><strong>'+t('none')+'</strong></div>';}
+function render(){var s=IMTLearning.summary();
+ document.getElementById('pageTitle').textContent=t('title');document.getElementById('heroTitle').textContent=t('hero');document.getElementById('heroText').textContent=t('text');document.getElementById('langBtn').textContent=label[lang];
+ document.getElementById('pAccuracy').textContent=s.accuracy+'%';document.getElementById('pTests').textContent=s.tests;document.getElementById('pQuestions').textContent=s.attempts;document.getElementById('pWeak').textContent=s.weak;
+ document.getElementById('pAccuracyL').textContent=t('accuracy');document.getElementById('pTestsL').textContent=t('tests');document.getElementById('pQuestionsL').textContent=t('answers');document.getElementById('pWeakL').textContent=t('weak');document.getElementById('weakTitle').textContent=t('weakT');document.getElementById('catTitle').textContent=t('catT');document.getElementById('recentTitle').textContent=t('recent');
+ var th=document.getElementById('themes');th.innerHTML='';var themes=IMTLearning.topWeakThemes(6);if(!themes.length)empty(th);else themes.forEach(function(x){var r=document.createElement('div');r.className='learn-list-row';var name=(lang==='en'&&x.nameEn)?x.nameEn:x.name;r.innerHTML='<span class="learn-list-ico">📚</span><span class="learn-list-body"><strong></strong><span></span><div class="progress-bar-small"><i></i></div></span><span class="learn-pill"></span>';r.querySelector('strong').textContent=name||('Tema '+x.themeId);r.querySelector('.learn-list-body span').textContent=cat(x.catId)+' · '+x.total+' '+t('q');r.querySelector('.learn-pill').textContent=x.accuracy+'%';r.querySelector('i').style.width=pct(x.accuracy)+'%';th.appendChild(r);});
+ var cl=document.getElementById('cats');cl.innerHTML='';var cs=IMTLearning.categoryStats();if(!cs.length)empty(cl);else cs.forEach(function(x){var r=document.createElement('div');r.className='learn-list-row';r.innerHTML='<span class="learn-list-ico">🚗</span><span class="learn-list-body"><strong></strong><span></span><div class="progress-bar-small"><i></i></div></span><span class="learn-pill"></span>';r.querySelector('strong').textContent=cat(x.catId);r.querySelector('.learn-list-body span').textContent=x.tests+' '+(x.tests===1?t('test'):t('testsW'))+' · '+(Number(x.testType)===9?t('imt'):t('sr'));r.querySelector('.learn-pill').textContent=x.accuracy+'%';r.querySelector('i').style.width=pct(x.accuracy)+'%';cl.appendChild(r);});
+ var re=document.getElementById('recent');re.innerHTML='';var hs=IMTLearning.history().slice(0,6);if(!hs.length)empty(re);else hs.forEach(function(x){var d=new Date(x.timestamp),r=document.createElement('div');r.className='learn-list-row';r.innerHTML='<span class="learn-list-ico">'+(x.approved?'✓':'↻')+'</span><span class="learn-list-body"><strong></strong><span></span></span><span class="learn-pill"></span>';r.querySelector('strong').textContent=cat(x.catId);r.querySelector('.learn-list-body span').textContent=d.toLocaleDateString()+' · '+x.correct+'/'+x.total;r.querySelector('.learn-pill').textContent=x.pct+'%';re.appendChild(r);});
+}
+document.getElementById('backBtn').onclick=function(){location.href='menu.html';};document.getElementById('langBtn').onclick=function(){lang=cycle[lang];try{localStorage.setItem('sr_lang',lang);}catch(e){}render();};render();})();
+</script>
+</body></html>

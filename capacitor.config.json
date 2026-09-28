@@ -1,0 +1,20 @@
+{
+  "appId": "com.lakhwindersingh.imt27codigo",
+  "appName": "IMT_27_Código",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0b4f8a",
+    "minSdkVersion": 24,
+    "targetSdkVersion": 34
+  },
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "LIGHT",
+      "backgroundColor": "#0b4f8a"
+    }
+  }
+}

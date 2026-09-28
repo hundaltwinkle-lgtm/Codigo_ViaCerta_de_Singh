@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#b52f2a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>SR Testes Código</title>
+<link rel="stylesheet" href="css/mobile-base.css">
+<link rel="stylesheet" href="css/menu.css">
+</head>
+<body class="safe-top safe-bottom">
+
+<header class="app-bar">
+  <button class="icon-btn" id="backBtn" type="button" aria-label="Voltar" title="Voltar">&#8249;</button>
+  <div class="app-title" id="pageTitle">—</div>
+  <span class="spacer"></span>
+  <button class="lang-btn" id="langBtn" type="button">PT</button>
+  <button class="icon-btn" id="settingsBtn" type="button" aria-label="Configuração IA" title="Config IA">&#9881;</button>
+</header>
+
+<main class="page" id="main">
+  <div class="mini-loading" id="loadingRow"><span>&#9203;</span> <span id="loadingText">A carregar…</span></div>
+</main>
+
+<footer class="footer">
+  <div class="owner" id="footerOwner">Lakhwinder Singh</div>
+  <div id="footerCpy">Copyright © 2026 — Todos os direitos reservados.</div>
+</footer>
+
+<!-- Ordem de carregamento (bridge): jquery -> mobile-db -> mobile-ai ->
+     mobile-tts -> mobile-apputil -> DBPerguntas -> ai.js -> tts.js -->
+<script src="lib/jquery.min.js"></script>
+<script src="js/mobile-db.js"></script>
+<script src="js/mobile-ai.js"></script>
+<script src="js/mobile-tts.js"></script>
+<script src="js/mobile-apputil.js"></script>
+<script src="db/DBPerguntas.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/tts.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ================= idioma ============================================= */
+  var LANG_CYCLE = { pt: 'en', en: 'pa', pa: 'pt' };
+  var LANG_LABEL = { pt: 'PT', en: 'EN', pa: 'ਪੰਜਾਬੀ' };
+  var currentLang = (function () {
+    var l = 'pt';
+    try { l = localStorage.getItem('sr_lang') || 'pt'; } catch (e) {}
+    return (l === 'en' || l === 'pa') ? l : 'pt';
+  })();
+
+  var I18N = {
+    pt: {
+      loading: 'A carregar…', back: 'Voltar', settingsAria: 'Configuração IA',
+      owner: 'Lakhwinder Singh', cpy: 'Copyright © 2026 — Todos os direitos reservados.',
+      questions: 'perguntas', exam: 'Exame completo', examSub: 'Prova completa da categoria',
+      fixedTitle: 'Teste Fixo', fixedSub: 'Perguntas na sequência oficial da categoria',
+      chooseTest: 'Escolha o teste fixo', testNumber: 'Teste Fixo nº ',
+      noFixed: 'Não há testes fixos suficientes para esta categoria.',
+      errDb: 'Não foi possível efetuar ligação com a base de dados.',
+      testUnavailable: 'Testes fixos indisponíveis'
+    },
+    en: {
+      loading: 'Loading…', back: 'Back', settingsAria: 'AI Settings',
+      owner: 'Lakhwinder Singh', cpy: 'Copyright © 2026 — All rights reserved.',
+      questions: 'questions', exam: 'Full exam', examSub: 'Full paper for this category',
+      fixedTitle: 'Fixed Test', fixedSub: 'Questions in the official category order',
+      chooseTest: 'Choose the fixed test', testNumber: 'Fixed Test No. ',
+      noFixed: 'Not enough fixed tests for this category.',
+      errDb: 'Could not connect to the database.',
+      testUnavailable: 'Fixed tests unavailable'
+    },
+    pa: {
+      loading: 'ਲੋਡ ਹੋ ਰਿਹਾ ਹੈ…', back: 'ਵਾਪਸ', settingsAria: 'ਏਆਈ ਸੈਟਿੰਗਾਂ',
+      owner: 'ਲਖਵਿੰਦਰ ਸਿੰਘ', cpy: 'ਕਾਪੀਰਾਈਟ © 2026 — ਸਾਰੇ ਹੱਕ ਰਾਖਵੇਂ ਹਨ।',
+      questions: 'ਪ੍ਰਸ਼ਨ', exam: 'ਪੂਰਾ ਇਮਤਿਹਾਨ', examSub: 'ਸ਼੍ਰੇਣੀ ਦਾ ਪੂਰਾ ਪੇਪਰ',
+      fixedTitle: 'ਫਿਕਸ ਟੈਸਟ', fixedSub: 'ਸ਼੍ਰੇਣੀ ਦੇ ਅਧਿਕਾਰਤ ਕ੍ਰਮ ਵਿੱਚ ਪ੍ਰਸ਼ਨ',
+      chooseTest: 'ਫਿਕਸ ਟੈਸਟ ਚੁਣੋ', testNumber: 'ਫਿਕਸ ਟੈਸਟ ਨੰ. ',
+      noFixed: 'ਇਸ ਸ਼੍ਰੇਣੀ ਲਈ ਕਾਫ਼ੀ ਫਿਕਸ ਟੈਸਟ ਨਹੀਂ ਹਨ।',
+      errDb: 'ਡਾਟਾਬੇਸ ਨਾਲ ਕਨੈਕਸ਼ਨ ਨਹੀਂ ਹੋ ਸਕਿਆ।',
+      testUnavailable: 'ਫਿਕਸ ਟੈਸਟ ਉਪਲਬਧ ਨਹੀਂ'
+    }
+  };
+
+  function t(key) {
+    var d = I18N[currentLang] || I18N.pt;
+    return (d[key] !== undefined) ? d[key] : I18N.pt[key];
+  }
+
+  var CAT_NAMES = {
+    pt: {
+      1: 'Categoria AM', 2: 'Categoria A e A2', 3: 'Categoria B e B1',
+      4: 'Categoria C e C1', 5: 'Categoria D e D1', 6: 'Categoria A e A1',
+      7: 'CAM / Mercadorias', 8: 'CAM / Passageiros', 9: 'TVDE', 10: 'Táxi'
+    },
+    en: {
+      1: 'Category AM', 2: 'Category A and A2', 3: 'Category B and B1',
+      4: 'Category C and C1', 5: 'Category D and D1', 6: 'Category A and A1',
+      7: 'CAM / Goods', 8: 'CAM / Passengers', 9: 'TVDE', 10: 'Taxi'
+    },
+    pa: {
+      1: 'ਸ਼੍ਰੇਣੀ AM', 2: 'ਸ਼੍ਰੇਣੀ A ਅਤੇ A2', 3: 'ਸ਼੍ਰੇਣੀ B ਅਤੇ B1',
+      4: 'ਸ਼੍ਰੇਣੀ C ਅਤੇ C1', 5: 'ਸ਼੍ਰੇਣੀ D ਅਤੇ D1', 6: 'ਸ਼੍ਰੇਣੀ A ਅਤੇ A1',
+      7: 'CAM / ਮਾਲ', 8: 'CAM / ਯਾਤਰੀ', 9: 'TVDE', 10: 'ਟੈਕਸੀ'
+    }
+  };
+
+  function catName(id) {
+    var d = CAT_NAMES[currentLang] || CAT_NAMES.pt;
+    return (d[id] !== undefined) ? d[id] : CAT_NAMES.pt[id];
+  }
+
+  /* ================= estado ============================================= */
+  var URL_VARS = (function () {
+    var q = window.location.search || '';
+    return q.charAt(0) === '?' ? q.substring(1).split(',') : [];
+  })();
+  var catId = URL_VARS[0] ? parseInt(URL_VARS[0], 10) : null;
+  var testType = URL_VARS[1] ? parseInt(URL_VARS[1], 10) : 1;
+
+  function examHref(varsArr) {
+    var parts = [String(varsArr[0]), String(varsArr[1]), '0'];
+    for (var i = 3; i < 7; i++) parts.push(varsArr[i] !== undefined ? String(varsArr[i]) : '');
+    parts.push(currentLang);
+    return 'exam.html?' + parts.join(',');
+  }
+
+  /* ================= renderização ======================================= */
+  function renderStatic() {
+    document.getElementById('langBtn').textContent = LANG_LABEL[currentLang];
+    document.getElementById('loadingText').textContent = t('loading');
+    document.getElementById('backBtn').setAttribute('aria-label', t('back'));
+    document.getElementById('backBtn').title = t('back');
+    document.getElementById('settingsBtn').setAttribute('aria-label', t('settingsAria'));
+    document.getElementById('footerOwner').textContent = t('owner');
+    document.getElementById('footerCpy').textContent = t('cpy');
+    document.getElementById('pageTitle').textContent = t('fixedTitle') + ' · ' +
+      (catId !== null ? catName(catId) : '—');
+  }
+
+  function buildRow(icon, iconCls, title, sub, badgeText, onClick) {
+    var el = document.createElement('div');
+    el.className = 'row';
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    el.innerHTML = '<div class="row-ico ' + iconCls + '">' + icon + '</div>'
+      + '<div class="row-body"><div class="row-title"></div><div class="row-sub"></div></div>'
+      + (badgeText !== null && badgeText !== undefined ? '<div class="badge"></div>' : '')
+      + '<span class="chev">›</span>';
+    el.querySelector('.row-title').textContent = title;
+    el.querySelector('.row-sub').textContent = sub || '';
+    var b = el.querySelector('.badge');
+    if (b) b.textContent = badgeText;
+    el.addEventListener('click', onClick);
+    return el;
+  }
+
+  /* ================= arranque =========================================== */
+  function fatal(msg) {
+    var main = document.getElementById('main');
+    main.innerHTML = '<div class="note" id="errNote"></div>';
+    document.getElementById('errNote').textContent = msg || t('errDb');
+  }
+
+  async function build() {
+    var main = document.getElementById('main');
+    main.innerHTML = '';
+
+    /* 1. Exame completo (mesma URL do desktop: tema vazio = prova total) */
+    var list1 = document.createElement('div');
+    list1.className = 'list';
+    var ex = document.createElement('div');
+    ex.className = 'row primary-row';
+    ex.setAttribute('role', 'button');
+    ex.setAttribute('tabindex', '0');
+    ex.innerHTML = '<div class="row-ico red">📝</div>'
+      + '<div class="row-body"><div class="row-title"></div><div class="row-sub"></div></div>'
+      + '<span class="chev">›</span>';
+    ex.querySelector('.row-title').textContent = t('exam');
+    ex.querySelector('.row-sub').textContent = t('examSub');
+    ex.addEventListener('click', function () {
+      window.location.href = examHref([catId, testType, '0', '', '', '', '']);
+    });
+    list1.appendChild(ex);
+    main.appendChild(list1);
+
+    /* 2. Testes fixos numerados (lógica do desktop opcoes_teste_fixo.html:
+       numberOfTests = floor(total perguntas da categoria / numPerg)) */
+    var list2 = document.createElement('div');
+    list2.className = 'list';
+    var st = document.createElement('div');
+    st.className = 'section-title';
+    st.textContent = t('chooseTest');
+    list2.appendChild(st);
+
+    var numberOfTests = 0;
+    var catA = 2, catB = 3, nA = 10, nB = 30; /* desktop: A/A1 usa A + B */
+
+    if (catId === 6) {
+      var ta = await awaitSafeCount(catA);
+      var tb = await awaitSafeCount(catB);
+      var testsA = Math.floor(ta / nA), testsB = Math.floor(tb / nB);
+      numberOfTests = Math.min(testsA, testsB);
+    } else {
+      var total = await awaitSafeCount(catId);
+      var numPerg = await awaitSafeNumPerg();
+      numberOfTests = numPerg > 0 ? Math.floor(total / numPerg) : 0;
+    }
+
+    if (numberOfTests > 0) {
+      for (var i = 1; i <= numberOfTests; i++) {
+        (function (n) {
+          list2.appendChild(buildRow('🎯', 'amber', t('testNumber') + n,
+            t('fixedSub'), String(n),
+            function () {
+              /* vars[4] = "test=N" — exatamente onde a página de exame
+                 desktop lê o offset da prova (testes_exame_teste_codigo1.html
+                 linha 237-238). */
+              window.location.href = examHref([catId, testType, '0', '', 'test=' + n]);
+            }));
+        })(i);
+      }
+    } else {
+      var note = document.createElement('div');
+      note.className = 'note';
+      note.textContent = t('noFixed');
+      list2.appendChild(note);
+    }
+    main.appendChild(list2);
+  }
+
+  function awaitSafeCount(catIdArg) {
+    return window.db.exec(
+      'SELECT count(id) AS total FROM perguntas WHERE categoria = ' +
+      catIdArg + ' AND tipoteste = ' + testType, 'get'
+    ).then(function (rows) {
+      return (rows && rows.length) ? (Number(rows[0].total) || 0) : 0;
+    }).catch(function () { return 0; });
+  }
+
+  function awaitSafeNumPerg() {
+    return getCurrentCat(catId).then(function (rows) {
+      return (rows && rows.length) ? (Number(rows[0].num_perguntas) || 0) : 0;
+    }).catch(function () { return 0; });
+  }
+
+  function boot() {
+    var ready = (typeof window.dbReady === 'function')
+      ? window.dbReady()
+      : new Promise(function (resolve, reject) {
+          var n = 0;
+          (function poll() {
+            if (typeof window.db !== 'undefined' && typeof window.db.exec === 'function') return resolve();
+            if (++n > 300) return reject(Error('db timeout'));
+            setTimeout(poll, 100);
+          })();
+        });
+
+    var timeout = new Promise(function (_, reject) {
+      setTimeout(function () { reject(Error('db timeout')); }, 30000);
+    });
+
+    Promise.race([ready, timeout])
+      .then(function () {
+        if (catId === null || isNaN(catId)) {
+          fatal(t('errDb'));
+          return;
+        }
+        renderStatic();
+        build();
+      })
+      .catch(function () { fatal(t('errDb')); });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('langBtn').addEventListener('click', function () {
+      currentLang = LANG_CYCLE[currentLang];
+      try { localStorage.setItem('sr_lang', currentLang); } catch (e) {}
+      renderStatic();
+      build(); /* reconstrói as linhas no novo idioma */
+    });
+    document.getElementById('backBtn').addEventListener('click', function () {
+      window.location.href = 'categories.html?' + (catId !== null ? catId : '');
+    });
+    document.getElementById('settingsBtn').addEventListener('click', function () {
+      window.location.href = 'settings.html';
+    });
+    renderStatic();
+    boot();
+  });
+})();
+</script>
+</body>
+</html>
