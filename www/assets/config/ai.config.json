@@ -1,9 +1,0 @@
-{
-  "endpoint": "https://openrouter.ai/api/v1/",
-  "model": "stealth/space-bunny-alpha",
-  "apiKey": "PASTE_YOUR_API_KEY_HERE",
-  "apiType": "openai",
-  "includeImage": true,
-  "maxTokens": 50000,
-  "temperature": 0.3
-}
