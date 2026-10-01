@@ -1,11 +1,11 @@
-# IMT_27_Código
+# Código ViaCerta de Singh
 
 ![Android](https://img.shields.io/badge/Android-8%2B-green)
 ![Languages](https://img.shields.io/badge/Languages-PT%20%7C%20EN%20%7C%20Punjabi-blue)
 ![Database](https://img.shields.io/badge/Database-SQLite-lightgrey)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-**IMT_27_Código** is an unofficial Android learning and practice application for Portuguese driving-theory study, including TVDE / CMTVDE learning content.
+**Código ViaCerta de Singh** is an unofficial Android learning and practice application for Portuguese driving-theory study, including TVDE / CMTVDE learning content.
 
 The project is designed for multilingual study with support for **Portuguese, English and Punjabi (Gurmukhi)**, offline question data, exam practice, review tools and downloadable offline question images.
 
@@ -258,7 +258,7 @@ TVDE images are included in the same complete offline image pack as the standard
 
 ## Educational Purpose
 
-IMT_27_Código is intended to help learners:
+Código ViaCerta de Singh is intended to help learners:
 
 - review driving-theory questions
 - understand road-safety concepts
